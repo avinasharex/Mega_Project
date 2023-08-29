@@ -2,6 +2,7 @@ import User from "../model/user.schema.js"
 import asyncHandler from "../services/async.handler.js"
 import customError from '../utils/cstom.error.js'
 import mailHelper from "../utils/mail.helper.js"
+import crypto from "crypto"
 
 export const cookieOption = {
     expireIn: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
@@ -153,8 +154,51 @@ export const forgotPassword = asyncHandler(async(req,res)=>{
 
 /*
 @RESET_PASSWORD 
-@route http://localhost:5000/api/auth/password/forgot
-@description User will submit we will generate token
-@parameters email
-@return success message - email send
+@route http://localhost:5000/api/auth/password/reset/:resetPasswordToken
+@description User will be reset password based on url token
+@parameters token from url, password and confirmPassword
+@return User object
 */
+
+export const restPassword = asyncHandler(async(req,res)=>{
+    const {token: resetToken} = req.params
+    const {password, confirmPasswod} = req.body
+    
+    const resetPassword = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest("hex")
+
+    const user = await User.findOne({
+        forgotPasswordToken: resetPassword,
+        forgotPasswordExpiry: {$gt: Date.now()}
+    })
+
+    if(!user){
+        throw new customError("Password token is invalid or expired", 400)
+    }
+
+    if(password !== confirmPasswod){
+        throw new customError("Password does not match", 400)
+    }
+
+    user.password = password
+    user.forgotPasswordToken = undefined
+    user.forgotPasswordExpiry = undefined
+
+    await user.save()
+
+    // create a token and send as response
+
+    const token = user.getJWTToken()
+    user.password = undefined
+
+     res.cookie("token", token, cookieOption)
+
+     res.status(200).json({
+        success: true,
+        user
+     })
+})
+
+// TODO: create controller for change password
