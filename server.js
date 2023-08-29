@@ -13,7 +13,7 @@ import app from "./app.js";
             throw err
         })
         const onListening =  ()=>{
-            console.log(`App is listening at http://localhost${config.PORT}`);
+            console.log(`App is listening at http://localhost:${config.PORT}`);
         }
         app.listen(config.PORT,onListening)
     } catch (e) {
