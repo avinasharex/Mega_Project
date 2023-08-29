@@ -1,6 +1,7 @@
 import User from "../model/user.schema.js"
 import asyncHandler from "../services/async.handler.js"
 import customError from '../utils/cstom.error.js'
+import mailHelper from "../utils/mail.helper.js"
 
 export const cookieOption = {
     expireIn: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
@@ -104,3 +105,56 @@ export const logut = asyncHandler(async(_req,res)=>{
         message: "User logout successsfully"
     })
 })
+
+/*
+@FORGOT_PASSWORD 
+@route http://localhost:5000/api/auth/password/forgot
+@description User will submit we will generate token
+@parameters email
+@return success message - email send
+*/
+
+export const forgotPassword = asyncHandler(async(req,res)=>{
+    const {email} = req.body
+
+    const user = await User.findOne({email})
+
+    if(!user){
+        throw new customError("Invalid credential", 404)
+    }
+
+    const resetToken =  user.generateForgotTokenPassword()
+
+    await user.save({validateBeforeSave: false})
+
+    const resetUrl = `${req.protocol}://${req.get("host")}/api/auth/password/forgot/reset/${resetToken}`
+
+    const text = `Your password reset url is \n\n${resetUrl}\n\n`
+
+    try {
+      await mailHelper({
+        email: user.email,
+        subject: "Password reset email for website",
+        text: text
+      })  
+      res.status(200).json({
+        success: true,
+        message: `Email send to ${user.email}`
+      })
+    } catch (e) {
+        // rollback - clear fields and save
+        user.forgotPasswordToken = undefined
+        user.forgotPasswordExpiry = undefined
+
+        await user.save({validateBeforeSave: false})
+        throw new customError(e.message, 500)
+    }
+})
+
+/*
+@RESET_PASSWORD 
+@route http://localhost:5000/api/auth/password/forgot
+@description User will submit we will generate token
+@parameters email
+@return success message - email send
+*/
