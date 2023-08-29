@@ -15,7 +15,7 @@ export const cookieOption = {
 @return User Object
 */
 
-export const signUP = asyncHandler(async(req,res,next)=>{
+export const signup = asyncHandler(async(req,res,next)=>{
     const {name,email,password} = req.body
 
     if(!name || !email || !password){
@@ -45,5 +45,62 @@ export const signUP = asyncHandler(async(req,res,next)=>{
         message: "User created successsfully",
         token,
         user
+    })
+})
+
+/*
+@LOGIN 
+@route http://localhost:5000/api/auth/login
+@description User login controller for logging a new user
+@parameters email and password
+@return User Object
+*/
+
+export const login = asyncHandler(async (req,res,next)=>{
+    const {email,password} = req.body
+
+    if(!email || !password){
+        throw new customError("Email and password required", 400)
+    }
+    
+    const user = await User.findOne({email}).select("+password")
+
+    if(!user){
+        throw new customError("Invalid credential", 400)
+    }
+
+    const isPasswordMatched = await user.comparePassword(password)
+
+    if(isPasswordMatched){
+       const token = user.getJWTToken()
+       user.password = undefined
+       res.cookie("token", token,  cookieOption)
+
+       res.status(200).json({ 
+        success: true,
+        message: "User login successsfully",
+        token,
+        user
+    })
+    }
+    throw new customError("Invalid credential", 400)
+})
+
+/*
+@LOGOUT 
+@route http://localhost:5000/api/auth/logout
+@description user logout by clearing user cookies
+@parameters 
+@return success message
+*/
+
+export const logut = asyncHandler(async(_req,res)=>{
+    res.cookie("token", null, {
+        expireIn: Date(Date.now())
+    })
+
+    res.status(200).json({ 
+        success: true,
+        message: "User logout successsfully"
     })
 })
