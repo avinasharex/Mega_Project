@@ -1,6 +1,6 @@
 import mongoose, { mongo } from "mongoose";
 import config from './config/index.js'
-import app from "./app";
+import app from "./app.js";
 
 // (async ()=>{})()
 (async ()=>{
