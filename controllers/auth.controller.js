@@ -143,6 +143,7 @@ export const forgotPassword = asyncHandler(async(req,res)=>{
         message: `Email send to ${user.email}`
       })
     } catch (e) {
+        // if something goes wrong with sending the email, you don't leave the user's account in a state where the reset token and expiry are set but the email wasn't sent.
         // rollback - clear fields and save
         user.forgotPasswordToken = undefined
         user.forgotPasswordExpiry = undefined
@@ -160,7 +161,7 @@ export const forgotPassword = asyncHandler(async(req,res)=>{
 @return User object
 */
 
-export const restPassword = asyncHandler(async(req,res)=>{
+export const resetPassword = asyncHandler(async(req,res)=>{
     const {token: resetToken} = req.params
     const {password, confirmPasswod} = req.body
     
@@ -221,7 +222,7 @@ export const getProfile = asyncHandler(async(req,res)=>{
     }
 
     res.status(200).json({
-        success: true,]
+        success: true,
         user
     })
 })
